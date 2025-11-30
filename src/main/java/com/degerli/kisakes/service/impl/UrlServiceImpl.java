@@ -6,13 +6,17 @@ import com.degerli.kisakes.model.entity.Url;
 import com.degerli.kisakes.repository.UrlRepository;
 import com.degerli.kisakes.service.UrlService;
 import java.security.SecureRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UrlServiceImpl implements UrlService {
 
   private static final String CHARS
@@ -21,6 +25,7 @@ public class UrlServiceImpl implements UrlService {
   private static final SecureRandom RANDOM = new SecureRandom();
 
   private final UrlRepository urlRepository;
+  private final RedisTemplate<String, String> redisTemplate;
 
   @Override
   @Transactional
@@ -32,14 +37,21 @@ public class UrlServiceImpl implements UrlService {
     return urlRepository.save(url);
   }
 
-  @Override
-  @Transactional
-  public String getOriginalUrlAndIncrementClicks(String shortCode) {
+  public String getOriginalUrl(String shortCode) {
+    String cacheKey = "url:" + shortCode;
+    String cachedUrl = redisTemplate.opsForValue().get(cacheKey);
+
+    if (cachedUrl != null) {
+      log.info("Cache HIT: {}", shortCode);
+      return cachedUrl;
+    }
+
+    log.info("Cache MISS: {}", shortCode);
 
     Url url = urlRepository.findByShortCode(shortCode)
         .orElseThrow(() -> new UrlNotFoundException(shortCode));
-    url.setClickCount(url.getClickCount() + 1);
-    urlRepository.save(url);
+
+    redisTemplate.opsForValue().set(cacheKey, url.getOriginalUrl(), 1, TimeUnit.HOURS);
 
     return url.getOriginalUrl();
   }
@@ -53,7 +65,6 @@ public class UrlServiceImpl implements UrlService {
           .collect(Collectors.joining());
     }
     while (urlRepository.findByShortCode(shortCode).isPresent());
-
     return shortCode;
   }
 }

@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: kisakes
+
+  profiles:
+    active: dev
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+server:
+  port: 8080

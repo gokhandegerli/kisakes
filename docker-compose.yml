@@ -29,24 +29,24 @@ services:
       timeout: 3s
       retries: 30
 
-  kisakes-app:
-    build: .
-    container_name: kisakes-app
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-      redis-cache:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - DATABASE_URL=jdbc:postgresql://postgres-db:5432/kisakes
-      - DATABASE_USERNAME=user
-      - DATABASE_PASSWORD=password
-      - REDIS_HOST=redis-cache
-      - REDIS_PORT=6379
-      - SPRING_LIQUIBASE_ENABLED=true
+  # kisakes-app:
+  #   build: .
+  #   container_name: kisakes-app
+  #   depends_on:
+  #     postgres-db:
+  #       condition: service_healthy
+  #     redis-cache:
+  #       condition: service_healthy
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=prod
+  #     - DATABASE_URL=jdbc:postgresql://postgres-db:5432/kisakes
+  #     - DATABASE_USERNAME=user
+  #     - DATABASE_PASSWORD=password
+  #     - REDIS_HOST=redis-cache
+  #     - REDIS_PORT=6379
+  #     - SPRING_LIQUIBASE_ENABLED=true
 
 volumes:
   postgres_data:

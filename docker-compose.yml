@@ -5,7 +5,7 @@ networks:
     driver: bridge
 
 services:
-  # 1. VERİTABANI VE CACHE
+  # 1. DATABASE AND CACHE
   # -------------------------------------
   postgres-db:
     image: postgres:16-alpine
@@ -39,7 +39,7 @@ services:
       timeout: 3s
       retries: 30
 
-  # 2. KISAKES UYGULAMASI (2 KOPYA)
+  # 2. APPS
   # -------------------------------------
   kisakes-app-1:
     build: .
@@ -93,7 +93,7 @@ services:
       - LOGGING_LEVEL_ROOT=INFO
       - MANAGEMENT_ZIPKIN_TRACING_ENABLED=false
 
-  # 3. GÖZLEMLENEBİLİRLİK YIĞINI (LOKI, PROMTAIL, GRAFANA)
+  # 3. MONITORING STACK (LOKI, PROMTAIL, GRAFANA)
   # ---------------------------------------------------------
   loki:
     image: grafana/loki:2.9.0

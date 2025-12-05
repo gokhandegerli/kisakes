@@ -1,9 +1,17 @@
 version: '3.8'
 
+networks:
+  kisakes-net:
+    driver: bridge
+
 services:
+  # 1. VERİTABANI VE CACHE
+  # -------------------------------------
   postgres-db:
     image: postgres:16-alpine
     container_name: postgres-db
+    networks:
+      - kisakes-net
     environment:
       POSTGRES_DB: kisakes
       POSTGRES_USER: user
@@ -21,6 +29,8 @@ services:
   redis-cache:
     image: redis:7-alpine
     container_name: redis-cache
+    networks:
+      - kisakes-net
     ports:
       - "6379:6379"
     healthcheck:
@@ -29,24 +39,97 @@ services:
       timeout: 3s
       retries: 30
 
-  # kisakes-app:
-  #   build: .
-  #   container_name: kisakes-app
-  #   depends_on:
-  #     postgres-db:
-  #       condition: service_healthy
-  #     redis-cache:
-  #       condition: service_healthy
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - SPRING_PROFILES_ACTIVE=prod
-  #     - DATABASE_URL=jdbc:postgresql://postgres-db:5432/kisakes
-  #     - DATABASE_USERNAME=user
-  #     - DATABASE_PASSWORD=password
-  #     - REDIS_HOST=redis-cache
-  #     - REDIS_PORT=6379
-  #     - SPRING_LIQUIBASE_ENABLED=true
+  # 2. KISAKES UYGULAMASI (2 KOPYA)
+  # -------------------------------------
+  kisakes-app-1:
+    build: .
+    container_name: kisakes-app-1
+    networks:
+      - kisakes-net
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    ports:
+      - "8081:8081" # Dış port 8081, iç port 8081
+    environment:
+      - SERVER_PORT=8081
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/kisakes
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - REDIS_HOST=redis-cache
+      - REDIS_PORT=6379
+      - SPRING_LIQUIBASE_ENABLED=true
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=0.0
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=*
+      - LOGGING_LEVEL_ROOT=INFO
+      - MANAGEMENT_ZIPKIN_TRACING_ENABLED=false
+
+  kisakes-app-2:
+    build: .
+    container_name: kisakes-app-2
+    networks:
+      - kisakes-net
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis-cache:
+        condition: service_healthy
+    ports:
+      - "8082:8082" # Dış port 8082, iç port 8082
+    environment:
+      - SERVER_PORT=8082
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/kisakes
+      - SPRING_DATASOURCE_USERNAME=user
+      - SPRING_DATASOURCE_PASSWORD=password
+      - REDIS_HOST=redis-cache
+      - REDIS_PORT=6379
+      - SPRING_LIQUIBASE_ENABLED=true
+      - MANAGEMENT_TRACING_SAMPLING_PROBABILITY=0.0
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=*
+      - LOGGING_LEVEL_ROOT=INFO
+      - MANAGEMENT_ZIPKIN_TRACING_ENABLED=false
+
+  # 3. GÖZLEMLENEBİLİRLİK YIĞINI (LOKI, PROMTAIL, GRAFANA)
+  # ---------------------------------------------------------
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - kisakes-net
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: promtail
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - kisakes-net
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    networks:
+      - kisakes-net
+    depends_on:
+      - loki
 
 volumes:
   postgres_data:

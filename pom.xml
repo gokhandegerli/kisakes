@@ -68,6 +68,26 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- JSON Formatında Loglama için -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>9.0</version>
+        </dependency>
+
+        <!-- Otomatik Trace ID ve Span ID üretimi için (Micrometer Tracing) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+            <version>1.6.0</version>
+        </dependency>
+
+        <!-- Üretilen Trace'leri bir sisteme gönderebilmek için (Zipkin/Jaeger vb.) -->
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
+            <version>3.5.1</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -32,6 +32,7 @@ public class UrlServiceImpl implements UrlService {
   @Transactional
   public Url createShortUrl(UrlCreateRequest request) {
     String uniqueShortCode = generateUniqueShortCode();
+    log.info("Creating short url with shortcode {}.", uniqueShortCode);
 
     shortCodeLookupRepository.save(new ShortCodeLookup(uniqueShortCode));
 
